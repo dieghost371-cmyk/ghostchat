@@ -1,0 +1,539 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#12070a">
+<title>Ghost Chat</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="ghost-icon.svg" type="image/svg+xml">
+<style>
+*{box-sizing:border-box;margin:0}
+:root{--acc:#e11d48}
+body{font-family:"Segoe UI",system-ui,sans-serif;background:#12070a;color:#e9edef;height:100dvh;overflow:hidden}
+button,input,textarea{font:inherit;color:inherit}
+.hide{display:none!important}
+.btn{background:var(--acc);border:0;border-radius:12px;padding:11px 16px;font-weight:600;cursor:pointer;color:#fff}
+.btn:hover{filter:brightness(1.12)}.btn:disabled{opacity:.5}
+.btn.alt{background:var(--p2)}.btn.sm{padding:6px 12px;font-size:13px;border-radius:999px}.btn.red{background:#7f1d1d}
+input,textarea{background:var(--p2);border:1px solid transparent;border-radius:10px;padding:10px 12px;width:100%;outline:0;resize:none}
+input:focus,textarea:focus{border-color:var(--ln)}
+label{display:block;font-size:12px;color:#bf9ca5;margin:12px 0 4px}
+.center{height:100%;display:grid;place-items:center;padding:24px}
+.card{background:var(--p);border:1px solid var(--ln);border-radius:24px;padding:28px;width:100%;max-width:400px;text-align:center}
+.card h1{margin:10px 0 8px}.card p{color:#bf9ca5;font-size:14px;margin-bottom:18px}
+.err{color:#f87171;font-size:13px;margin-top:10px}
+#app{display:flex;height:100%}
+#side{width:100%;max-width:420px;border-right:1px solid var(--ln);display:flex;flex-direction:column;background:var(--p);flex:none}
+#main{flex:1;display:flex;flex-direction:column;min-width:0;background:transparent}
+.top{display:flex;align-items:center;gap:10px;padding:10px 14px;background:var(--p2)}
+.av{width:42px;height:42px;border-radius:50%;object-fit:cover;background:var(--ln);flex:none;border:2px solid var(--r,var(--ln))}
+.grow{flex:1;min-width:0}.name{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sub{color:#bf9ca5;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ib{background:0;border:0;color:#bf9ca5;padding:8px;border-radius:50%;cursor:pointer;position:relative;display:grid;place-items:center}
+.ib:hover{background:var(--ln);color:#e9edef}
+.badge{position:absolute;top:0;right:0;background:var(--acc);color:#fff;font-size:10px;font-weight:700;min-width:16px;height:16px;border-radius:8px;display:grid;place-items:center;padding:0 4px}
+.brand{display:flex;gap:8px;align-items:center;padding:8px 14px;background:rgba(20,6,10,.55);border-bottom:1px solid var(--ln);color:#fb7185;font-weight:600;font-size:14px}
+.brand span{margin-left:auto;color:#bf9ca5;font-size:11px;font-weight:400}
+#list{overflow:auto;flex:1}
+.row{display:flex;align-items:center;gap:12px;padding:10px 14px;cursor:pointer}
+.row:hover,.row.on{background:var(--p2)}
+.row .grow{border-bottom:1px solid rgba(255,255,255,.06);padding-bottom:10px}
+.line{display:flex;justify-content:space-between;gap:8px;align-items:center}
+.time{font-size:11px;color:#bf9ca5;flex:none}
+.unread{background:var(--acc);color:#fff;font-size:11px;font-weight:600;min-width:20px;height:20px;border-radius:10px;display:grid;place-items:center;padding:0 6px;flex:none}
+#msgs{flex:1;overflow:auto;padding:16px;display:flex;flex-direction:column;gap:6px}
+.m{max-width:78%;padding:7px 12px;border-radius:10px 10px 10px 2px;background:var(--p2);align-self:flex-start;word-break:break-word;white-space:pre-wrap;font-size:14px;animation:pop .15s}
+.m.me{background:color-mix(in srgb,var(--acc) 62%,#1a0a0f);align-self:flex-end;border-radius:10px 10px 2px 10px}
+.m small{display:block;font-size:10px;color:#bf9ca5;text-align:right;margin-top:2px}
+@keyframes pop{from{transform:scale(.96);opacity:0}}
+#bar{display:flex;gap:8px;padding:10px;background:var(--p2);align-items:center}
+#bar input{background:var(--p);border-radius:999px;padding:11px 16px}
+#bar button{width:44px;height:44px;border-radius:50%;padding:0;display:grid;place-items:center}
+.empty{margin:auto;color:#bf9ca5;text-align:center;padding:24px;font-size:14px}
+.empty b{display:block;font-size:42px;font-weight:400;margin-bottom:8px}
+.sec{padding:8px 14px;color:#fb7185;font-size:12px;font-weight:700;text-transform:uppercase}
+.back{display:none}
+.ov{position:fixed;inset:0;background:rgba(0,0,0,.65);display:grid;place-items:center;padding:16px;z-index:10}
+.md{background:var(--p);border:1px solid var(--ln);border-radius:20px;padding:20px;width:100%;max-width:400px;max-height:90dvh;overflow:auto}
+.md h2{font-size:17px;margin-bottom:6px;display:flex;justify-content:space-between;align-items:center}
+.pr{display:flex;align-items:center;gap:10px;background:var(--p2);border-radius:10px;padding:8px 10px;margin-top:8px}
+.themes{display:flex;gap:8px;margin-top:6px}.themes button{width:28px;height:28px;border-radius:50%;border:0;cursor:pointer}
+.themes .sel{outline:2px solid #fff;outline-offset:2px}
+.pill{font-size:12px;padding:5px 12px;border-radius:999px;background:var(--ln);color:#bf9ca5}
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--p2);border:1px solid var(--ln);padding:10px 18px;border-radius:999px;font-size:14px;z-index:20}
+@media(max-width:760px){#main{display:none}#app.chat #side{display:none}#app.chat #main{display:flex}#side{max-width:none}.back{display:grid}}
+
+:root{--p:rgba(30,10,16,.58);--p2:rgba(70,22,32,.5);--ln:rgba(255,110,130,.2);--blur:40px}
+body::before{content:"";position:fixed;inset:-20%;z-index:-1;background:radial-gradient(40% 40% at 20% 20%,rgba(225,29,72,.6),transparent 70%),radial-gradient(45% 45% at 85% 30%,rgba(127,29,29,.65),transparent 70%),radial-gradient(50% 50% at 50% 100%,rgba(244,63,94,.35),transparent 70%);filter:blur(var(--blur))}
+#side,.top,.brand,.card,.md,#bar,#banner{-webkit-backdrop-filter:blur(calc(var(--blur)*.5)) saturate(150%);backdrop-filter:blur(calc(var(--blur)*.5)) saturate(150%)}
+.ov{-webkit-backdrop-filter:blur(10px);backdrop-filter:blur(10px)}
+#banner{padding:8px 14px;background:color-mix(in srgb,var(--acc) 55%,transparent);font-size:13px}
+.m{background:rgba(60,20,28,.6)}.mi{display:block;max-width:100%;max-height:300px;border-radius:8px;cursor:pointer}
+#call{position:fixed;inset:0;z-index:30;background:rgba(14,4,8,.88);-webkit-backdrop-filter:blur(24px);backdrop-filter:blur(24px);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:28px}
+#rv{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+#lv{position:absolute;top:16px;right:16px;width:96px;height:136px;object-fit:cover;border-radius:14px;border:2px solid var(--acc);z-index:3;transform:scaleX(-1)}
+.ctl{display:flex;gap:18px;position:relative;z-index:2;margin-top:auto;margin-bottom:max(36px,env(safe-area-inset-bottom))}
+.cb{width:60px;height:60px;border-radius:50%;border:0;background:rgba(255,255,255,.16);display:grid;place-items:center;cursor:pointer;color:#fff;font-size:24px}
+.cb.on{background:#fff;color:#000}.cb.end{background:#dc2626}.cb.ok{background:#16a34a}
+#call>div:first-of-type{margin-top:auto}
+</style>
+</head>
+<body>
+
+<div id="login" class="center hide">
+  <div class="card">
+    <img src="ghost-icon.svg" width="84" height="84" alt="">
+    <h1 id="lname">Ghost Chat</h1>
+    <p>Your private, WhatsApp-style messenger. Sign in, claim your username, add friends and start chatting.</p>
+    <button class="btn" style="width:100%" id="gbtn">Continue with Google</button>
+    <div class="err" id="lerr"></div>
+    <ul style="margin-top:18px;text-align:left;color:#bf9ca5;font-size:12px;list-style:none;line-height:1.9">
+      <li>• Set a unique username &amp; profile picture</li><li>• Add contacts by their username</li>
+      <li>• Accept friend requests to unlock chat</li><li>• Install the app from the download menu</li>
+    </ul>
+  </div>
+</div>
+
+<div id="app" class="hide">
+  <aside id="side">
+    <div class="top">
+      <img class="av" id="myav" alt="" style="cursor:pointer">
+      <div class="grow"><div class="name" id="myname"></div></div>
+      <button class="ib" id="addb" title="Add contact"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg></button>
+      <button class="ib" id="reqb" title="Friend requests"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.7 21a2 2 0 0 1-3.4 0"/></svg><span class="badge hide" id="reqn"></span></button>
+      <button class="ib" id="dlb" title="Get the app"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5M12 15V3"/></svg></button>
+      <button class="ib" id="setb" title="Settings">⚙️</button>
+    </div>
+    <div class="brand"><img src="ghost-icon.svg" width="20" height="20" alt=""><b id="bname">Ghost Chat</b><span id="myuser"></span></div>
+    <div id="banner" class="hide"></div>
+    <div id="list"></div>
+  </aside>
+  <section id="main">
+    <div id="chead" class="top hide">
+      <button class="ib back" id="back">←</button>
+      <img class="av" id="cav" alt="">
+      <div class="grow"><div class="name" id="cname"></div><div class="sub" id="cuser"></div></div>
+      <button class="ib" id="vcall" title="Voice call">📞</button><button class="ib" id="vidcall" title="Video call">🎥</button><button class="ib" id="delb" title="Remove contact">🗑</button>
+    </div>
+    <div id="msgs"><div class="empty"><b>👻</b>Select a contact to view your conversation. Add friends by their username to start a private chat.</div></div>
+    <form id="bar" class="hide" autocomplete="off">
+      <button type="button" class="btn alt" id="attb" aria-label="Send photo">📷</button><input type="file" id="file" accept="image/*" class="hide">
+      <input id="txt" placeholder="Type a message" maxlength="2000">
+      <button type="button" class="btn alt" id="micb" aria-label="Voice message">🎤</button>
+      <button class="btn" aria-label="Send"><svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><path d="M3 11l18-8-8 18-2.5-7L3 11z"/></svg></button>
+    </form>
+  </section>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/12.0.0/firebase-app.js";
+import { getAuth, onAuthStateChanged, signInWithPopup, GoogleAuthProvider, signOut }
+  from "https://www.gstatic.com/firebasejs/12.0.0/firebase-auth.js";
+import { getDatabase, ref, get, set, update, remove, push, onValue, onChildAdded, query, limitToLast, limitToFirst, orderByKey, startAt, endAt }
+  from "https://www.gstatic.com/firebasejs/12.0.0/firebase-database.js";
+
+const app = initializeApp({
+  apiKey: "AIzaSyDIaT4VD2rzaGqsDv_RxGm_IYnX4OiJeXA",
+  authDomain: "bloodlegen-5e51c.firebaseapp.com",
+  databaseURL: "https://bloodlegen-5e51c-default-rtdb.firebaseio.com",
+  projectId: "bloodlegen-5e51c",
+  storageBucket: "bloodlegen-5e51c.firebasestorage.app",
+  messagingSenderId: "130652097903",
+  appId: "1:130652097903:web:e6fbbca95927cbe5486c9a",
+  measurementId: "G-1Y2V69S719"
+});
+const auth = getAuth(app), db = getDatabase(app);
+const $ = id => document.getElementById(id);
+const gen = s => `https://api.dicebear.com/9.x/ghost/svg?seed=${encodeURIComponent(s)}&backgroundColor=0a0a0a,1a1a1a,2d2d2d,375a4c`;
+const THEMES = ["#e11d48", "#d946ef", "#f59e0b", "#3b82f6", "#ef4444", "#8b5cf6"];
+const cid = (a, b) => [a, b].sort().join("_");
+const h = (t, p = {}, ...c) => {
+  const e = document.createElement(t);
+  for (const [k, v] of Object.entries(p)) {
+    if (k === "class") e.className = v; else if (k === "style") e.style.cssText = v;
+    else if (k in e) e[k] = v; else e.setAttribute(k, v);
+  }
+  e.append(...c.flat().filter(x => x != null && x !== false)); return e;
+};
+const toast = m => { const t = h("div", { class: "toast" }, m); document.body.append(t); setTimeout(() => t.remove(), 2600); };
+const fmt = ts => {
+  const d = new Date(ts), n = new Date(), day = 864e5;
+  if (d.toDateString() === n.toDateString()) return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+  if (n - d < 2 * day && new Date(n - day).toDateString() === d.toDateString()) return "Yesterday";
+  return d.toLocaleDateString([], { day: "numeric", month: "short" });
+};
+const fmtT = ts => new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+
+let CFG = {}, me = null, P = null, friends = {}, incoming = {}, msgs = {}, reads = {}, active = null, subs = [], msgSubs = {}, installEv = null;
+window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEv = e; });
+if ("serviceWorker" in navigator && location.protocol.startsWith("http")) navigator.serviceWorker.register("sw.js").catch(() => {});
+
+const show = id => ["login", "app"].forEach(x => $(x).classList.toggle("hide", x !== id));
+const setAcc = c => document.documentElement.style.setProperty("--acc", c || CFG.acc || "#e11d48");
+
+function modal(title, body, closable = true) {
+  const close = () => ov.remove();
+  const ov = h("div", { class: "ov", onclick: e => { if (e.target === ov && closable) close(); } },
+    h("div", { class: "md" }, h("h2", {}, title, closable && h("button", { class: "ib", onclick: close }, "✕")), body));
+  document.body.append(ov); return close;
+}
+
+/* ---------- auth ---------- */
+$("gbtn").onclick = async () => {
+  $("lerr").textContent = "";
+  try { await signInWithPopup(auth, new GoogleAuthProvider()); }
+  catch (e) {
+    const c = e.code || "";
+    $("lerr").textContent = c === "auth/unauthorized-domain" ? "Add this domain in Firebase → Authentication → Settings → Authorized domains."
+      : c === "auth/operation-not-allowed" ? "Enable Google sign-in in Firebase Authentication."
+      : c.includes("popup-closed") || c.includes("cancelled") ? "" : "Sign-in failed. Try again.";
+  }
+};
+
+onAuthStateChanged(auth, async user => {
+  subs.forEach(f => f()); subs = []; Object.values(msgSubs).forEach(f => f()); msgSubs = {};
+  friends = {}; incoming = {}; msgs = {}; reads = {}; active = null; P = null;
+  document.querySelectorAll(".ov").forEach(o => o.remove());
+  if (!user) { me = null; setAcc(); show("login"); return; }
+  me = user; show("app");
+  const s = await get(ref(db, "users/" + user.uid));
+  if (s.exists()) { P = s.val(); setAcc(P.theme); } else { P = null; profileModal(true); }
+  paintMe(); start(); render(); renderChat();
+});
+
+function paintMe() {
+  const p = P || { name: me.displayName || "Ghost", avatar: me.photoURL || gen("ghost"), username: "" };
+  $("myav").src = p.avatar; $("myname").textContent = p.name; $("myuser").textContent = p.username ? "@" + p.username : "no username";
+  $("myav").style.setProperty("--r", p.theme || "#e11d48");
+}
+$("myav").onclick = () => profileModal(false);
+
+/* ---------- profile ---------- */
+function profileModal(required) {
+  const init = P || { name: me.displayName || "", username: "", avatar: me.photoURL || "", bio: "", theme: "#e11d48" };
+  let theme = init.theme || "#e11d48";
+  const av = h("img", { class: "av", style: "width:88px;height:88px;margin:auto;display:block", src: init.avatar || gen("ghost") });
+  const name = h("input", { value: init.name, placeholder: "Ghost" });
+  const user = h("input", { value: init.username, placeholder: "ghost_user", autocapitalize: "none", maxLength: 20,
+    oninput: () => user.value = user.value.toLowerCase().replace(/[^a-z0-9_]/g, "") });
+  const avatar = h("input", { value: init.avatar, placeholder: "https://…", oninput: () => av.src = avatar.value || gen(user.value || "ghost") });
+  const bio = h("textarea", { rows: 2, placeholder: "Hey! I'm on Ghost Chat 👻", maxLength: 140 }, init.bio || "");
+  const err = h("div", { class: "err" });
+  const pick = h("input", { type: "file", accept: "image/*", class: "hide", onchange: async () => { if (pick.files[0]) { avatar.value = await shrink(pick.files[0], 256, true); av.src = avatar.value; } } });
+  const tb = THEMES.map(c => h("button", { style: `background:${c}`, class: c === theme ? "sel" : "", onclick: () => {
+    theme = c; tb.forEach(b => b.classList.toggle("sel", b === tb[THEMES.indexOf(c)])); av.style.setProperty("--r", c); } }));
+  av.style.setProperty("--r", theme);
+  const save = h("button", { class: "btn", style: "width:100%;margin-top:16px", onclick: async () => {
+    const u = user.value.trim();
+    if (!/^[a-z0-9_]{3,20}$/.test(u)) { err.textContent = "Username: 3–20 letters, numbers or _"; return; }
+    save.disabled = true; err.textContent = "";
+    const data = { name: name.value.trim() || u, username: u, avatar: avatar.value.trim() || gen(u), bio: bio.value.trim(), theme };
+    const upd = { ["users/" + me.uid]: data, ["usernames/" + u]: me.uid };
+    if (P && P.username && P.username !== u) upd["usernames/" + P.username] = null;
+    try { await update(ref(db), upd); P = data; setAcc(theme); paintMe(); close(); toast("Profile saved"); render();
+      if (!Object.keys(subs).length) start(); }
+    catch { err.textContent = "That username is taken (or not allowed). Try another."; save.disabled = false; }
+  } }, "Save profile");
+  const close = modal(required ? "Set up your profile" : "Edit profile", h("div", {},
+    av, h("div", { style: "text-align:center" }, h("button", { class: "ib", style: "display:inline;font-size:12px;color:#fb7185", onclick: () => { avatar.value = gen(user.value || name.value || "ghost" + Math.random().toString(36).slice(2, 6)); av.src = avatar.value; } }, "Generate ghost avatar"), h("button", { class: "ib", style: "display:inline;font-size:12px;color:#fb7185;margin-left:10px", onclick: () => pick.click() }, "Upload photo"), pick),
+    h("label", {}, "Google account"), h("div", { class: "sub", style: "padding:2px" }, me.email || ""), h("label", {}, "Display name"), name, h("label", {}, "Username" + (required ? " (required)" : "")), user,
+    h("label", {}, "Avatar URL"), avatar, h("label", {}, "Bio"), bio, h("label", {}, "Accent color"), h("div", { class: "themes" }, tb),
+    err, save, !required && h("button", { class: "btn alt", style: "width:100%;margin-top:8px", onclick: () => { close(); signOut(auth); } }, "Log out")), !required);
+}
+
+/* ---------- data ---------- */
+function start() {
+  if (subs.length) return;
+  subs.push(onValue(ref(db, "config/app"), s => { CFG = s.val() || {}; applyCfg(); }));
+  subs.push(onValue(ref(db, "incall/" + me.uid), s => incomingCall(s.val())));
+  subs.push(onValue(ref(db, "friends/" + me.uid), async s => {
+    const ids = Object.keys(s.val() || {});
+    for (const id of Object.keys(friends)) if (!ids.includes(id)) { delete friends[id]; msgSubs[id]?.(); delete msgSubs[id]; delete msgs[id]; if (active === id) active = null; }
+    await Promise.all(ids.map(async id => {
+      if (!friends[id]) { const u = await get(ref(db, "users/" + id)); if (u.exists()) friends[id] = u.val(); }
+      if (friends[id] && !msgs[id]) msgs[id] = cacheGet(id);
+      if (friends[id] && !msgSubs[id]) msgSubs[id] = onValue(query(ref(db, `chats/${cid(me.uid, id)}/messages`), limitToLast(60)), m => {
+        const a = []; m.forEach(c => { a.push({ id: c.key, ...c.val() }); }); msgs[id] = a; cacheSet(id, a);
+        if (active === id) markRead(id); render(); if (active === id) renderChat();
+      });
+    }));
+    render(); renderChat();
+  }));
+  subs.push(onValue(ref(db, "requests/" + me.uid), async s => {
+    const ids = Object.keys(s.val() || {}); incoming = {};
+    await Promise.all(ids.map(async id => { const u = await get(ref(db, "users/" + id)); if (u.exists()) incoming[id] = u.val(); }));
+    const n = Object.keys(incoming).length; $("reqn").textContent = n; $("reqn").classList.toggle("hide", !n); render();
+  }));
+  subs.push(onValue(ref(db, "reads/" + me.uid), s => { reads = s.val() || {}; render(); }));
+}
+function markRead(id) {
+  const a = msgs[id] || []; const last = a.length ? a[a.length - 1].at : 0;
+  if (last && (reads[cid(me.uid, id)] || 0) < last) set(ref(db, `reads/${me.uid}/${cid(me.uid, id)}`), last);
+}
+
+/* ---------- sidebar ---------- */
+function render() {
+  const l = $("list"); l.replaceChildren();
+  const rows = Object.entries(friends).map(([id, u]) => {
+    const a = msgs[id] || [], last = a[a.length - 1], r = reads[cid(me.uid, id)] || 0;
+    return { id, u, last, unread: a.filter(m => m.from !== me.uid && m.at > r).length };
+  }).sort((x, y) => (y.last?.at || 0) - (x.last?.at || 0));
+  if (!rows.length) l.append(h("div", { class: "empty" }, h("b", {}, "👻"), "No conversations yet. Add a contact by their username to start chatting."));
+  rows.forEach(({ id, u, last, unread }) => l.append(h("div", { class: "row" + (active === id ? " on" : ""), onclick: () => openChat(id) },
+    h("img", { class: "av", style: `width:48px;height:48px;--r:${u.theme || "var(--ln)"}`, src: u.avatar }),
+    h("div", { class: "grow" },
+      h("div", { class: "line" }, h("span", { class: "name" }, u.name), last && h("span", { class: "time" }, fmt(last.at))),
+      h("div", { class: "line" }, h("span", { class: "sub", style: unread ? "color:#e9edef" : "" }, last ? (last.from === me.uid ? "You: " : "") + prev(last) : "No messages yet"),
+        unread > 0 && h("span", { class: "unread" }, unread))))));
+}
+
+/* ---------- chat ---------- */
+function openChat(id) { active = id; $("app").classList.add("chat"); markRead(id); render(); renderChat(); $("txt").focus(); }
+function renderChat() {
+  const u = friends[active]; const box = $("msgs");
+  $("chead").classList.toggle("hide", !u); $("bar").classList.toggle("hide", !u);
+  if (!u) { box.replaceChildren(h("div", { class: "empty" }, h("b", {}, "👻"), "Select a contact to view your conversation. Add friends by their username to start a private chat.")); $("app").classList.remove("chat"); return; }
+  $("cav").src = u.avatar; $("cav").style.setProperty("--r", u.theme || "var(--ln)"); $("cname").textContent = u.name; $("cuser").textContent = "@" + u.username + (u.bio ? " · " + u.bio : "");
+  const a = msgs[active] || [];
+  box.replaceChildren(...(a.length ? a.map(m => h("div", { class: "m" + (m.from === me.uid ? " me" : "") }, body(m), h("small", {}, fmtT(m.at))))
+    : [h("div", { class: "empty" }, h("b", {}, "💬"), `Say hi to ${u.name} 👋`)]));
+  box.scrollTop = box.scrollHeight;
+}
+$("back").onclick = () => { $("app").classList.remove("chat"); active = null; render(); renderChat(); };
+$("bar").onsubmit = async e => {
+  e.preventDefault(); const text = $("txt").value.trim(); if (!text || !active) return; $("txt").value = "";
+  try { await push(ref(db, `chats/${cid(me.uid, active)}/messages`), { from: me.uid, text, at: Date.now() }); }
+  catch { toast("Message failed to send"); }
+};
+$("delb").onclick = () => {
+  const u = friends[active], id = active; if (!u) return;
+  const c = modal("Remove contact", h("div", {}, h("p", { style: "color:#bf9ca5;font-size:14px" }, `Remove ${u.name} (@${u.username}) from your contacts?`),
+    h("button", { class: "btn red", style: "width:100%;margin-top:14px", onclick: async () => {
+      await update(ref(db), { [`friends/${me.uid}/${id}`]: null, [`friends/${id}/${me.uid}`]: null }); c(); toast("Contact removed"); } }, "Remove")));
+};
+
+/* ---------- add contact ---------- */
+const accept = async from => {
+  await update(ref(db), { [`friends/${me.uid}/${from}`]: true, [`friends/${from}/${me.uid}`]: true, [`requests/${me.uid}/${from}`]: null });
+};
+$("addb").onclick = () => {
+  const res = h("div", {}), input = h("input", { placeholder: "e.g. ghost_user", autocapitalize: "none" });
+  let tmr;
+  input.oninput = () => { clearTimeout(tmr); tmr = setTimeout(search, 250); };
+  async function search() {
+    const q = input.value.trim().toLowerCase().replace(/^@/, "");
+    if (q.length < 2) { res.replaceChildren(); return; }
+    const s = await get(query(ref(db, "usernames"), orderByKey(), startAt(q), endAt(q + "\uf8ff"), limitToFirst(10)));
+    const found = []; s.forEach(c => { if (c.val() !== me.uid) found.push([c.val(), c.key]); });
+    const rows = await Promise.all(found.map(async ([uid]) => {
+      const [u, r] = await Promise.all([get(ref(db, "users/" + uid)), get(ref(db, `requests/${uid}/${me.uid}`))]);
+      if (!u.exists()) return null; const d = u.val();
+      const act = friends[uid] ? h("span", { class: "pill" }, "Friend") : r.exists() ? h("span", { class: "pill" }, "Requested")
+        : incoming[uid] ? h("button", { class: "btn sm", onclick: async () => { await accept(uid); toast(`You and @${d.username} are now friends!`); search(); } }, "Accept")
+        : h("button", { class: "btn sm", onclick: async () => { await set(ref(db, `requests/${uid}/${me.uid}`), { at: Date.now() }); toast(`Friend request sent to @${d.username}.`); search(); } }, "Add");
+      return h("div", { class: "pr" }, h("img", { class: "av", src: d.avatar, style: `--r:${d.theme || "var(--ln)"}` }),
+        h("div", { class: "grow" }, h("div", { class: "name" }, d.name), h("div", { class: "sub" }, "@" + d.username)), act);
+    }));
+    const ok = rows.filter(Boolean);
+    res.replaceChildren(...(ok.length ? ok : [h("p", { class: "sub", style: "margin-top:12px" }, "No users found.")]));
+  }
+  modal("Add a contact", h("div", {}, h("label", {}, "Search by username"), input, res,
+    h("p", { class: "sub", style: "margin-top:14px;white-space:normal" }, "Ask your friends for their @username, then add them. They'll need to accept your request before you can chat.")));
+  input.focus();
+};
+
+/* ---------- requests ---------- */
+$("reqb").onclick = () => {
+  const body = h("div", {});
+  const paint = () => {
+    const e = Object.entries(incoming);
+    body.replaceChildren(...(e.length ? e.map(([uid, d]) => h("div", { class: "pr" }, h("img", { class: "av", src: d.avatar, style: `--r:${d.theme || "var(--ln)"}` }),
+      h("div", { class: "grow" }, h("div", { class: "name" }, d.name), h("div", { class: "sub" }, "@" + d.username)),
+      h("button", { class: "btn sm", onclick: async () => { await accept(uid); toast("Request accepted"); } }, "Accept"),
+      h("button", { class: "btn sm alt", onclick: () => remove(ref(db, `requests/${me.uid}/${uid}`)) }, "Decline")))
+      : [h("p", { class: "sub", style: "margin-top:12px;white-space:normal" }, "No pending friend requests.")]));
+  };
+  paint(); const iv = setInterval(() => { if (!body.isConnected) clearInterval(iv); else paint(); }, 800);
+  modal("Friend requests", body);
+};
+
+/* ---------- download / install ---------- */
+$("dlb").onclick = () => {
+  const url = location.href.split("#")[0].replace(/index\.html$/, "");
+  const qr = h("div", { style: "background:#fff;padding:14px;border-radius:16px;display:inline-block" });
+  const copy = h("button", { class: "btn sm", onclick: async () => { try { await navigator.clipboard.writeText(url); copy.textContent = "Copied!"; setTimeout(() => copy.textContent = "Copy", 2000); } catch {} } }, "Copy");
+  modal("Get the Ghost Chat app", h("div", { style: "text-align:center" }, qr,
+    h("p", { class: "sub", style: "white-space:normal;margin:14px 0" }, "Scan this QR code with your phone camera to open Ghost Chat, then install it for a native app experience."),
+    h("div", { class: "pr" }, h("span", { class: "grow sub" }, url), copy),
+    h("button", { class: "btn", style: "width:100%;margin-top:14px", onclick: async () => {
+      if (installEv) { installEv.prompt(); installEv = null; } else alert("Open your browser menu (⋮) and choose 'Install Ghost Chat' / 'Add to Home Screen'.");
+    } }, "Install Ghost Chat")));
+  if (window.QRCode) new QRCode(qr, { text: url, width: 176, height: 176 });
+};
+
+/* ---------- config / helpers ---------- */
+function applyCfg() {
+  const n = CFG.name || "Ghost Chat"; $("bname").textContent = n; $("lname").textContent = n; document.title = n;
+  document.documentElement.style.setProperty("--blur", (CFG.blur ?? 40) + "px");
+  const b = $("banner"); b.textContent = CFG.banner || ""; b.classList.toggle("hide", !CFG.banner);
+  setAcc(P && P.theme); paintMe();
+}
+const cacheGet = id => { try { return JSON.parse(localStorage.getItem(`gc_${me.uid}_${id}`)) || undefined; } catch {} };
+const cacheSet = (id, a) => { const k = `gc_${me.uid}_${id}`, t = a.slice(-25);
+  try { localStorage.setItem(k, JSON.stringify(t)); } catch { try { localStorage.setItem(k, JSON.stringify(t.filter(m => !m.data))); } catch {} } };
+const prev = m => m.type === "img" ? "📷 Photo" : m.type === "voice" ? "🎤 Voice message" : m.text;
+const body = m => m.type === "img" ? h("img", { class: "mi", src: m.data, onclick: () => modal("Photo", h("img", { src: m.data, style: "width:100%;border-radius:10px" })) })
+  : m.type === "voice" ? h("audio", { controls: true, src: m.data, style: "width:220px;height:40px" }) : m.text;
+const shrink = (file, max, sq) => new Promise(res => { const i = new Image(); i.onload = () => {
+  let sx = 0, sy = 0, sw = i.width, sh = i.height; if (sq) { const s = Math.min(sw, sh); sx = (sw - s) / 2; sy = (sh - s) / 2; sw = sh = s; }
+  const k = Math.min(1, max / Math.max(sw, sh)), c = document.createElement("canvas"); c.width = sw * k; c.height = sh * k;
+  c.getContext("2d").drawImage(i, sx, sy, sw, sh, 0, 0, c.width, c.height); res(c.toDataURL("image/jpeg", .72)); }; i.src = URL.createObjectURL(file); });
+const sendMsg = async o => { try { await push(ref(db, `chats/${cid(me.uid, active)}/messages`), { from: me.uid, at: Date.now(), ...o }); } catch { toast("Message failed to send"); } };
+
+/* ---------- photos & voice ---------- */
+$("attb").onclick = () => $("file").click();
+$("file").onchange = async () => { const f = $("file").files[0]; $("file").value = ""; if (f && active) sendMsg({ type: "img", data: await shrink(f, 900) }); };
+let rec = null, rt = 0, rIv = null;
+$("micb").onclick = async () => {
+  if (rec) { rec.stop(); return; } if (!active) return;
+  try {
+    const s = await navigator.mediaDevices.getUserMedia({ audio: true }), mr = new MediaRecorder(s, { audioBitsPerSecond: 24000 }), chunks = [];
+    rec = mr; rt = Date.now(); mr.ondataavailable = e => chunks.push(e.data);
+    mr.onstop = () => { s.getTracks().forEach(t => t.stop()); clearInterval(rIv); rec = null; $("micb").textContent = "🎤"; $("micb").style.background = ""; $("txt").placeholder = "Type a message";
+      const dur = Math.round((Date.now() - rt) / 1000); if (dur < 1) return;
+      const fr = new FileReader(); fr.onload = () => sendMsg({ type: "voice", data: fr.result, dur }); fr.readAsDataURL(new Blob(chunks, { type: mr.mimeType })); };
+    mr.start(); $("micb").textContent = "⏹"; $("micb").style.background = "#dc2626";
+    rIv = setInterval(() => { const t = Math.round((Date.now() - rt) / 1000); $("txt").placeholder = `🔴 Recording ${t}s – tap ⏹ to send`; if (t >= 60) mr.stop(); }, 500);
+  } catch { toast("Allow microphone access"); }
+};
+
+/* ---------- calls (WebRTC, signalling via Firebase) ---------- */
+const ICE = { iceServers: [{ urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] }] };
+let pc = null, lstream = null, cId = null, cPeer = null, cUnsubs = [], cTimer = null, cT0 = 0, qIce = [], ring = null, cUi = {}, pend = null;
+const ringStart = () => { try { const a = new (window.AudioContext || window.webkitAudioContext)(), beep = () => { const o = a.createOscillator(), g = a.createGain(); o.frequency.value = 440; g.gain.value = .15; o.connect(g); g.connect(a.destination); o.start(); o.stop(a.currentTime + .4); };
+  beep(); const iv = setInterval(() => { beep(); navigator.vibrate?.(300); }, 1600); ring = () => { clearInterval(iv); a.close(); }; } catch {} };
+const ringStop = () => { ring?.(); ring = null; };
+const media = async type => { try { return await navigator.mediaDevices.getUserMedia({ audio: true, video: type === "video" ? { facingMode: "user" } : false }); }
+  catch { toast("Allow microphone" + (type === "video" ? " & camera" : "") + " access"); return null; } };
+function callScreen(u, type, inc) {
+  const vid = type === "video";
+  const rv = h("video", { id: "rv", autoplay: true, playsInline: true, class: vid ? "" : "hide" }), ra = h("audio", { autoplay: true });
+  const lv = h("video", { id: "lv", autoplay: true, muted: true, playsInline: true, class: "hide" });
+  const st = h("div", { class: "sub", style: "font-size:15px" }, inc ? `Incoming ${type} call…` : "Calling…");
+  const ctl = h("div", { class: "ctl" });
+  const mk = (ic, t, fn, c = "") => { const b = h("button", { class: "cb " + c, title: t, onclick: () => fn(b) }, ic); return b; };
+  const mute = mk("🎙️", "Mute", b => { const t = lstream?.getAudioTracks()[0]; if (!t) return; t.enabled = !t.enabled; b.classList.toggle("on", !t.enabled); b.textContent = t.enabled ? "🎙️" : "🔇"; });
+  const spk = mk("🔊", "Speaker / hands-free", async b => { const on = !b.classList.contains("on"); b.classList.toggle("on", on); const el = vid ? rv : ra;
+    try { const d = (await navigator.mediaDevices.enumerateDevices()).filter(x => x.kind === "audiooutput");
+      const p = on ? (d.find(x => /speaker/i.test(x.label)) || d[0]) : (d.find(x => /earpiece|receiver|headset/i.test(x.label)) || d[0]); await el.setSinkId(p?.deviceId || "default"); }
+    catch { toast("Your phone controls the speaker output"); } }, "on");
+  const cam = mk("📹", "Camera on/off", b => { const t = lstream?.getVideoTracks()[0]; if (!t) return; t.enabled = !t.enabled; b.classList.toggle("on", !t.enabled); });
+  const endb = mk("📵", "End call", () => inc && pend ? declineCall() : endCall(true), "end");
+  const info = h("div", { style: "position:relative;z-index:2;text-align:center" }, h("img", { class: "av", src: u.avatar, style: "width:110px;height:110px;--r:" + (u.theme || "#e11d48") }), h("h2", { style: "margin:10px 0 4px" }, u.name), st);
+  const el = h("div", { id: "call" }, rv, ra, lv, info, ctl); document.body.append(el);
+  cUi = { el, st, rv, ra, lv, ctl, endb, info, vid,
+    inCall: () => ctl.replaceChildren(...[mute, spk, vid ? cam : null, endb].filter(Boolean)),
+    show: s => { lv.srcObject = s; vid && lv.classList.remove("hide"); } };
+  if (inc) ctl.replaceChildren(endb, mk("📞", "Accept", acceptCall, "ok")); else ctl.replaceChildren(endb);
+}
+function newPc() {
+  const me_pc = pc = new RTCPeerConnection(ICE); qIce = [];
+  lstream.getTracks().forEach(t => pc.addTrack(t, lstream));
+  const rs = new MediaStream();
+  pc.ontrack = e => { rs.addTrack(e.track); (cUi.vid ? cUi.rv : cUi.ra).srcObject = rs; };
+  pc.onicecandidate = e => e.candidate && push(ref(db, `calls/${cId}/ice_${me.uid}`), e.candidate.toJSON());
+  pc.onconnectionstatechange = () => { if (pc !== me_pc) return; const s = pc.connectionState; if (s === "connected") connected(); if (s === "failed") endCall(true); };
+}
+const addIce = c => pc.remoteDescription ? pc.addIceCandidate(c).catch(() => {}) : qIce.push(c);
+const flush = () => qIce.splice(0).forEach(c => pc.addIceCandidate(c).catch(() => {}));
+function connected() {
+  ringStop(); if (cT0) return; cT0 = Date.now(); cUi.inCall();
+  if (cUi.vid) { cUi.info.querySelectorAll("img,h2").forEach(x => x.classList.add("hide")); cUi.info.style.cssText += ";position:absolute;top:16px;left:16px;text-align:left"; }
+  cTimer = setInterval(() => { const s = Math.floor((Date.now() - cT0) / 1000); cUi.st.textContent = String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0"); }, 1000);
+}
+async function startCall(type) {
+  if (pc || pend || !active) return; const peer = active, u = friends[peer];
+  if (!(lstream = await media(type))) return;
+  cId = cid(me.uid, peer) + "_" + Date.now(); cPeer = peer; callScreen(u, type, false); cUi.show(lstream); newPc();
+  const o = await pc.createOffer(); await pc.setLocalDescription(o);
+  try { await set(ref(db, "calls/" + cId), { from: me.uid, to: peer, type, offer: { type: o.type, sdp: o.sdp }, at: Date.now() });
+    await set(ref(db, "incall/" + peer), { id: cId, from: me.uid, type, at: Date.now() }); }
+  catch { toast("Calls need the Firebase rules for calls/ and incall/"); endCall(false); return; }
+  cUnsubs.push(onValue(ref(db, "calls/" + cId), s => { const v = s.val(); if (!v) { endCall(false); return; }
+    if (v.answer && !pc.remoteDescription) { cUi.st.textContent = "Connecting…"; ringStop(); pc.setRemoteDescription(v.answer).then(flush); } }));
+  cUnsubs.push(onChildAdded(ref(db, `calls/${cId}/ice_${peer}`), s => addIce(s.val())));
+  ringStart(); cUi.st.textContent = "Ringing…"; const my = cId; setTimeout(() => { if (cId === my && !cT0) { toast("No answer"); endCall(true); } }, 45000);
+}
+async function incomingCall(v) {
+  if (!v) { if (pend && !pc) { ringStop(); cUi.el?.remove(); cUi = {}; pend = null; cId = null; } return; }
+  if (pc || pend || Date.now() - v.at > 45000) return;
+  const u = friends[v.from] || (await get(ref(db, "users/" + v.from))).val(); if (!u) return;
+  pend = v; cId = v.id; cPeer = v.from; callScreen(u, v.type, true); ringStart();
+}
+async function acceptCall() {
+  const v = pend; ringStop(); if (!(lstream = await media(v.type))) { declineCall(); return; }
+  cUi.show(lstream); cUi.st.textContent = "Connecting…"; cUi.ctl.replaceChildren(cUi.endb); pend = null; newPc();
+  const c = (await get(ref(db, "calls/" + cId))).val(); if (!c) { endCall(false); return; }
+  await pc.setRemoteDescription(c.offer); flush();
+  const a = await pc.createAnswer(); await pc.setLocalDescription(a);
+  await update(ref(db, "calls/" + cId), { answer: { type: a.type, sdp: a.sdp } }); remove(ref(db, "incall/" + me.uid));
+  cUnsubs.push(onValue(ref(db, "calls/" + cId), s => { if (!s.val()) endCall(false); }));
+  cUnsubs.push(onChildAdded(ref(db, `calls/${cId}/ice_${cPeer}`), s => addIce(s.val())));
+}
+function declineCall() { ringStop(); remove(ref(db, "calls/" + cId)).catch(() => {}); remove(ref(db, "incall/" + me.uid)).catch(() => {}); cUi.el?.remove(); cUi = {}; pend = null; cId = null; }
+function endCall(notify) {
+  if (!pc && !cId) return; ringStop(); clearInterval(cTimer); cUnsubs.forEach(f => f()); cUnsubs = [];
+  const id = cId, peer = cPeer; try { pc?.close(); } catch {} pc = null; lstream?.getTracks().forEach(t => t.stop()); lstream = null;
+  cUi.el?.remove(); cUi = {}; cT0 = 0; cId = null; cPeer = null; pend = null;
+  if (notify && id) { remove(ref(db, "calls/" + id)).catch(() => {}); remove(ref(db, "incall/" + peer)).catch(() => {}); }
+}
+$("vcall").onclick = () => startCall("audio"); $("vidcall").onclick = () => startCall("video");
+
+/* ---------- settings / about ---------- */
+$("setb").onclick = () => {
+  const wa = (n, t) => h("a", { href: "https://wa.me/" + n, target: "_blank", style: "color:#fb7185" }, t);
+  const btn = (t, fn, c = "alt") => h("button", { class: "btn " + c, style: "width:100%;margin-top:8px", onclick: fn }, t);
+  const c = modal("Settings", h("div", {}, btn("Edit profile", () => { c(); profileModal(false); }), btn("Admin panel", () => { c(); adminGate(); }),
+    h("div", { class: "pr", style: "flex-direction:column;text-align:center;margin-top:16px;padding:16px;gap:6px" },
+      h("img", { src: "ghost-icon.svg", width: 56, height: 56 }), h("b", {}, CFG.name || "Ghost Chat"),
+      h("div", { class: "sub" }, CFG.by || "Powered by GXD Studio"), h("div", { class: "sub" }, "Owner: Ghost Dexter"),
+      h("div", { class: "sub", style: "white-space:normal" }, "WhatsApp only: ", wa("94743010225", "074 301 0225"), " / ", wa("94767742583", "076 774 2583"))),
+    btn("Log out", () => { c(); signOut(auth); }, "red")));
+};
+
+/* ---------- admin ---------- */
+const HASH = "bedc35fb9816004025a4de9b0b751eb980fc08ec18318b01024d51b1d35744c2";
+const sha = async t => [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(t)))].map(b => b.toString(16).padStart(2, "0")).join("");
+function adminGate() {
+  const pw = h("input", { type: "password", placeholder: "Admin password" }), e = h("div", { class: "err" });
+  const c = modal("Admin access", h("div", {}, pw, e, h("button", { class: "btn", style: "width:100%;margin-top:12px", onclick: async () => {
+    if (await sha(pw.value) === HASH) { c(); adminPanel(); } else e.textContent = "Wrong password"; } }, "Unlock")));
+  pw.focus();
+}
+async function adminPanel() {
+  const f = (k, l, ph) => { const i = h("input", { value: CFG[k] || "", placeholder: ph || "" }); i.k = k; return [l, i]; };
+  const fs = [f("name", "App name", "Ghost Chat"), f("banner", "Announcement banner (shown to everyone)"), f("by", "About line", "Powered by GXD Studio")];
+  const acc = h("input", { type: "color", value: CFG.acc || "#e11d48", style: "height:44px;padding:4px" });
+  const blur = h("input", { type: "range", min: 0, max: 80, value: CFG.blur ?? 40 });
+  const msg = h("div", { class: "err" }), users = h("div", {}, h("p", { class: "sub" }, "Loading users…"));
+  const save = h("button", { class: "btn", style: "width:100%;margin-top:14px", onclick: async () => {
+    const o = { acc: acc.value, blur: +blur.value }; fs.forEach(([, i]) => o[i.k] = i.value.trim());
+    try { await set(ref(db, "config/app"), o); msg.textContent = ""; toast("App updated for everyone"); } catch { msg.textContent = "Not allowed – add the Firebase rule for config/app."; } } }, "Save & publish");
+  const reset = h("button", { class: "btn alt", style: "width:100%;margin-top:8px", onclick: async () => { try { await remove(ref(db, "config/app")); toast("Reset to default"); } catch { msg.textContent = "Not allowed by Firebase rules."; } } }, "Reset to default");
+  const c = modal("Admin panel", h("div", {}, h("div", { class: "sec", style: "padding:0" }, "App look & text"),
+    ...fs.flat(), h("label", {}, "Accent colour"), acc, h("label", {}, "Background blur"), blur, msg, save, reset,
+    h("div", { class: "sec", style: "padding:18px 0 0" }, "Users"), users));
+  [...document.querySelectorAll(".md")].pop().style.maxWidth = "560px";
+  try {
+    const s = await get(ref(db, "users")), rows = []; s.forEach(x => rows.push([x.key, x.val()]));
+    users.replaceChildren(h("p", { class: "sub" }, rows.length + " registered users"), ...rows.map(([uid, d]) => h("div", { class: "pr" },
+      h("img", { class: "av", src: d.avatar, style: `--r:${d.theme || "#e11d48"}` }), h("div", { class: "grow" }, h("div", { class: "name" }, d.name), h("div", { class: "sub" }, "@" + d.username)),
+      uid === me.uid ? h("span", { class: "pill" }, "You") : h("button", { class: "btn sm red", onclick: async e => { if (!confirm("Remove @" + d.username + "?")) return;
+        try { await update(ref(db), { ["users/" + uid]: null, ["usernames/" + d.username]: null }); e.target.closest(".pr").remove(); } catch { toast("Not allowed by Firebase rules"); } } }, "Remove"))));
+  } catch { users.replaceChildren(h("p", { class: "err" }, "Could not load users (check Firebase rules).")); }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "name": "Ghost Chat",
+  "short_name": "Ghost Chat",
+  "description": "A WhatsApp-style private messenger with Google sign-in.",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#12070a",
+  "theme_color": "#12070a",
+  "icons": [{ "src": "ghost-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" }]
+}
