@@ -246,6 +246,7 @@ function profileModal(required) {
 /* ---------- data ---------- */
 function start() {
   if (subs.length) return;
+  document.addEventListener("click", askNotif, { once: true });
   subs.push(onValue(ref(db, "config/app"), s => { CFG = s.val() || {}; applyCfg(); }));
   subs.push(onValue(ref(db, "incall/" + me.uid), s => incomingCall(s.val())));
   subs.push(onValue(ref(db, "friends/" + me.uid), async s => {
@@ -255,7 +256,7 @@ function start() {
       if (!friends[id]) { const u = await get(ref(db, "users/" + id)); if (u.exists()) friends[id] = u.val(); }
       if (friends[id] && !msgs[id]) msgs[id] = cacheGet(id);
       if (friends[id] && !msgSubs[id]) msgSubs[id] = onValue(query(ref(db, `chats/${cid(me.uid, id)}/messages`), limitToLast(60)), m => {
-        const a = []; m.forEach(c => { a.push({ id: c.key, ...c.val() }); }); msgs[id] = a; cacheSet(id, a);
+        const a = []; m.forEach(c => { a.push({ id: c.key, ...c.val() }); }); msgs[id] = a; cacheSet(id, a); alertNew(id, a);
         if (active === id) markRead(id); render(); if (active === id) renderChat();
       });
     }));
@@ -410,11 +411,21 @@ $("micb").onclick = async () => {
 };
 
 /* ---------- calls (WebRTC, signalling via Firebase) ---------- */
-const ICE = { iceServers: [{ urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] }] };
+const STUN = [{ urls: ["stun:stun.l.google.com:19302", "stun:stun1.l.google.com:19302"] }];
+const OPEN_TURN = [{ urls: "stun:openrelay.metered.ca:80" },
+  { urls: ["turn:openrelay.metered.ca:80", "turn:openrelay.metered.ca:443", "turns:openrelay.metered.ca:443?transport=tcp"], username: "openrelayproject", credential: "openrelayproject" }];
+// Mobile networks usually need a TURN relay, otherwise the call "connects" but nobody can hear anything.
+async function iceCfg() {
+  let extra = []; const t = (CFG.turn || "").trim();
+  try { if (/^https?:/i.test(t)) extra = await (await fetch(t)).json(); else if (t) extra = JSON.parse(t); } catch {}
+  return { iceServers: [...(Array.isArray(extra) ? extra : []), ...STUN, ...OPEN_TURN], iceCandidatePoolSize: 4 };
+}
+const play = (el, st) => { el.srcObject = st; el.muted = false; const r = el.play?.();
+  r?.catch(() => { toast("Tap the screen to hear the call"); document.addEventListener("click", () => el.play().catch(() => {}), { once: true }); }); };
 let pc = null, lstream = null, cId = null, cPeer = null, cUnsubs = [], cTimer = null, cT0 = 0, qIce = [], ring = null, cUi = {}, pend = null;
 const ringStart = () => { try { const a = new (window.AudioContext || window.webkitAudioContext)(), beep = () => { const o = a.createOscillator(), g = a.createGain(); o.frequency.value = 440; g.gain.value = .15; o.connect(g); g.connect(a.destination); o.start(); o.stop(a.currentTime + .4); };
   beep(); const iv = setInterval(() => { beep(); navigator.vibrate?.(300); }, 1600); ring = () => { clearInterval(iv); a.close(); }; } catch {} };
-const ringStop = () => { ring?.(); ring = null; };
+const ringStop = () => { ring?.(); ring = null; closeNotif("call"); };
 const media = async type => { try { return await navigator.mediaDevices.getUserMedia({ audio: true, video: type === "video" ? { facingMode: "user" } : false }); }
   catch { toast("Allow microphone" + (type === "video" ? " & camera" : "") + " access"); return null; } };
 function callScreen(u, type, inc) {
@@ -438,13 +449,13 @@ function callScreen(u, type, inc) {
     show: s => { lv.srcObject = s; vid && lv.classList.remove("hide"); } };
   if (inc) ctl.replaceChildren(endb, mk("📞", "Accept", acceptCall, "ok")); else ctl.replaceChildren(endb);
 }
-function newPc() {
-  const me_pc = pc = new RTCPeerConnection(ICE); qIce = [];
+async function newPc() {
+  const conf = await iceCfg(); const me_pc = pc = new RTCPeerConnection(conf); qIce = [];
   lstream.getTracks().forEach(t => pc.addTrack(t, lstream));
   const rs = new MediaStream();
-  pc.ontrack = e => { rs.addTrack(e.track); (cUi.vid ? cUi.rv : cUi.ra).srcObject = rs; };
+  pc.ontrack = e => { rs.addTrack(e.track); play(cUi.vid ? cUi.rv : cUi.ra, rs); };
   pc.onicecandidate = e => e.candidate && push(ref(db, `calls/${cId}/ice_${me.uid}`), e.candidate.toJSON());
-  pc.onconnectionstatechange = () => { if (pc !== me_pc) return; const s = pc.connectionState; if (s === "connected") connected(); if (s === "failed") endCall(true); };
+  pc.onconnectionstatechange = () => { if (pc !== me_pc) return; const s = pc.connectionState; if (s === "connected") connected(); if (s === "failed") { toast("Call couldn't connect – the network blocked it"); endCall(true); } };
 }
 const addIce = c => pc.remoteDescription ? pc.addIceCandidate(c).catch(() => {}) : qIce.push(c);
 const flush = () => qIce.splice(0).forEach(c => pc.addIceCandidate(c).catch(() => {}));
@@ -454,15 +465,15 @@ function connected() {
   cTimer = setInterval(() => { const s = Math.floor((Date.now() - cT0) / 1000); cUi.st.textContent = String(Math.floor(s / 60)).padStart(2, "0") + ":" + String(s % 60).padStart(2, "0"); }, 1000);
 }
 async function startCall(type) {
-  if (pc || pend || !active) return; const peer = active, u = friends[peer];
+  if (pc || pend || cId || !active) return; const peer = active, u = friends[peer];
   if (!(lstream = await media(type))) return;
-  cId = cid(me.uid, peer) + "_" + Date.now(); cPeer = peer; callScreen(u, type, false); cUi.show(lstream); newPc();
+  cId = cid(me.uid, peer) + "_" + Date.now(); cPeer = peer; callScreen(u, type, false); cUi.show(lstream); await newPc();
   const o = await pc.createOffer(); await pc.setLocalDescription(o);
   try { await set(ref(db, "calls/" + cId), { from: me.uid, to: peer, type, offer: { type: o.type, sdp: o.sdp }, at: Date.now() });
     await set(ref(db, "incall/" + peer), { id: cId, from: me.uid, type, at: Date.now() }); }
   catch { toast("Calls need the Firebase rules for calls/ and incall/"); endCall(false); return; }
   cUnsubs.push(onValue(ref(db, "calls/" + cId), s => { const v = s.val(); if (!v) { endCall(false); return; }
-    if (v.answer && !pc.remoteDescription) { cUi.st.textContent = "Connecting…"; ringStop(); pc.setRemoteDescription(v.answer).then(flush); } }));
+    if (v.answer && !pc.remoteDescription && !pc._a) { pc._a = 1; cUi.st.textContent = "Connecting…"; ringStop(); pc.setRemoteDescription(v.answer).then(flush); } }));
   cUnsubs.push(onChildAdded(ref(db, `calls/${cId}/ice_${peer}`), s => addIce(s.val())));
   ringStart(); cUi.st.textContent = "Ringing…"; const my = cId; setTimeout(() => { if (cId === my && !cT0) { toast("No answer"); endCall(true); } }, 45000);
 }
@@ -471,10 +482,11 @@ async function incomingCall(v) {
   if (pc || pend || Date.now() - v.at > 45000) return;
   const u = friends[v.from] || (await get(ref(db, "users/" + v.from))).val(); if (!u) return;
   pend = v; cId = v.id; cPeer = v.from; callScreen(u, v.type, true); ringStart();
+  if (document.hidden || !document.hasFocus()) notify("📞 Incoming " + v.type + " call", u.name, "call", { open: v.from }, u.avatar, true);
 }
 async function acceptCall() {
   const v = pend; ringStop(); if (!(lstream = await media(v.type))) { declineCall(); return; }
-  cUi.show(lstream); cUi.st.textContent = "Connecting…"; cUi.ctl.replaceChildren(cUi.endb); pend = null; newPc();
+  cUi.show(lstream); cUi.st.textContent = "Connecting…"; cUi.ctl.replaceChildren(cUi.endb); pend = null; await newPc();
   const c = (await get(ref(db, "calls/" + cId))).val(); if (!c) { endCall(false); return; }
   await pc.setRemoteDescription(c.offer); flush();
   const a = await pc.createAnswer(); await pc.setLocalDescription(a);
@@ -491,11 +503,33 @@ function endCall(notify) {
 }
 $("vcall").onclick = () => startCall("audio"); $("vidcall").onclick = () => startCall("video");
 
+/* ---------- phone notifications ---------- */
+const seenAt = {};
+const askNotif = () => { if ("Notification" in window && Notification.permission === "default") Notification.requestPermission(); };
+async function notify(title, body, tag, data, icon, sticky) {
+  if (!("Notification" in window) || Notification.permission !== "granted") return;
+  const o = { body, icon: icon || "ghost-icon.svg", badge: "ghost-icon.svg", tag, renotify: true, vibrate: [200, 100, 200], data, requireInteraction: !!sticky };
+  try { const r = await navigator.serviceWorker?.getRegistration(); if (r) return await r.showNotification(title, o); } catch {}
+  try { new Notification(title, o); } catch {}
+}
+async function closeNotif(tag) { try { const r = await navigator.serviceWorker?.getRegistration(); (await r?.getNotifications({ tag }))?.forEach(n => n.close()); } catch {} }
+function alertNew(id, a) {
+  const last = a.length ? a[a.length - 1].at : 0;
+  if (seenAt[id] === undefined) { seenAt[id] = last; return; }          // first load: don't notify old messages
+  const fresh = a.filter(m => m.at > seenAt[id] && m.from !== me.uid); seenAt[id] = Math.max(seenAt[id], last);
+  const u = friends[id]; if (!u || !fresh.length || (!document.hidden && active === id)) return;
+  notify(u.name, fresh.length > 1 ? `${fresh.length} new messages` : prev(fresh[0]), "msg-" + id, { open: id }, u.avatar);
+}
+navigator.serviceWorker?.addEventListener("message", e => { const id = e.data?.open; if (id && friends[id]) openChat(id); });
+
 /* ---------- settings / about ---------- */
 $("setb").onclick = () => {
   const wa = (n, t) => h("a", { href: "https://wa.me/" + n, target: "_blank", style: "color:#fb7185" }, t);
   const btn = (t, fn, c = "alt") => h("button", { class: "btn " + c, style: "width:100%;margin-top:8px", onclick: fn }, t);
-  const c = modal("Settings", h("div", {}, btn("Edit profile", () => { c(); profileModal(false); }), btn("Admin panel", () => { c(); adminGate(); }),
+  const c = modal("Settings", h("div", {}, btn("Edit profile", () => { c(); profileModal(false); }), btn(("Notification" in window && Notification.permission === "granted") ? "🔔 Notifications: ON" : "🔔 Enable notifications", async () => {
+      if (!("Notification" in window)) return toast("This browser doesn't support notifications");
+      const p = await Notification.requestPermission(); toast(p === "granted" ? "Notifications enabled" : "Blocked – allow notifications for this site in browser settings");
+      if (p === "granted") notify("Ghost Chat", "Notifications are on 👻", "test", {}); }), btn("Admin panel", () => { c(); adminGate(); }),
     h("div", { class: "pr", style: "flex-direction:column;text-align:center;margin-top:16px;padding:16px;gap:6px" },
       h("img", { src: "ghost-icon.svg", width: 56, height: 56 }), h("b", {}, CFG.name || "Ghost Chat"),
       h("div", { class: "sub" }, CFG.by || "Powered by GXD Studio"), h("div", { class: "sub" }, "Owner: Ghost Dexter"),
@@ -514,7 +548,7 @@ function adminGate() {
 }
 async function adminPanel() {
   const f = (k, l, ph) => { const i = h("input", { value: CFG[k] || "", placeholder: ph || "" }); i.k = k; return [l, i]; };
-  const fs = [f("name", "App name", "Ghost Chat"), f("banner", "Announcement banner (shown to everyone)"), f("by", "About line", "Powered by GXD Studio")];
+  const fs = [f("name", "App name", "Ghost Chat"), f("banner", "Announcement banner (shown to everyone)"), f("by", "About line", "Powered by GXD Studio"), f("turn", "TURN for calls (optional): metered.ca credentials URL or JSON list")];
   const acc = h("input", { type: "color", value: CFG.acc || "#e11d48", style: "height:44px;padding:4px" });
   const blur = h("input", { type: "range", min: 0, max: 80, value: CFG.blur ?? 40 });
   const msg = h("div", { class: "err" }), users = h("div", {}, h("p", { class: "sub" }, "Loading users…"));
