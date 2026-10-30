@@ -92,21 +92,6 @@ body::before{content:"";position:fixed;inset:-20%;z-index:-1;background:radial-g
 .sr .t{font-size:17px}.sr .s{font-size:14px;color:#bf9ca5;white-space:normal}.sr>span:first-child{color:#bf9ca5;display:grid}
 .pf{padding:18px 20px;border-bottom:1px solid var(--ln)}
 img.dxg{width:220px;max-width:70%;mix-blend-mode:screen;margin:14px auto 0;display:block}
-
-:root{--g1:rgba(225,29,72,.6);--g2:rgba(127,29,29,.65);--g3:rgba(244,63,94,.35);--glow:0}
-body::before{background:radial-gradient(40% 40% at 20% 20%,var(--g1),transparent 70%),radial-gradient(45% 45% at 85% 30%,var(--g2),transparent 70%),radial-gradient(50% 50% at 50% 100%,var(--g3),transparent 70%)}
-html[data-bubble=pill] .m,html[data-bubble=pill] .m.me{border-radius:20px}
-html[data-bubble=sharp] .m,html[data-bubble=sharp] .m.me{border-radius:3px}
-html[data-font=mono] body{font-family:ui-monospace,Menlo,Consolas,monospace}
-html[data-font=serif] body{font-family:Georgia,"Times New Roman",serif}
-.btn,.fab{box-shadow:0 0 calc(var(--glow)*.4px) var(--acc)}
-select{background:var(--p2);border:0;border-radius:10px;padding:10px 12px;width:100%;color:inherit;outline:0}option{background:#1a0a0f}
-.tabs2{display:flex;gap:6px;overflow-x:auto;margin:8px 0 12px}
-.chip{flex:none;border:0;border-radius:999px;padding:7px 14px;background:var(--p2);color:#bf9ca5;cursor:pointer;font-size:13px}.chip.on{background:var(--acc);color:#fff}
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-bottom:10px}
-.stat{background:var(--p2);border-radius:14px;padding:12px;text-align:center;font-size:12px;color:#bf9ca5}.stat b{display:block;font-size:24px;color:#e9edef}
-.bn{height:110px;border-radius:14px;background:var(--p2) center/cover;display:grid;place-items:center;color:#bf9ca5;font-size:13px;cursor:pointer}
-#cav,#cname{cursor:pointer}
 </style>
 </head>
 <body>
@@ -193,7 +178,7 @@ const fmt = ts => {
 };
 const fmtT = ts => new Date(ts).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
-let blocked = {}, banned = null, ADM = false, CFG = {}, me = null, P = null, friends = {}, incoming = {}, msgs = {}, reads = {}, active = null, subs = [], msgSubs = {}, installEv = null;
+let CFG = {}, me = null, P = null, friends = {}, incoming = {}, msgs = {}, reads = {}, active = null, subs = [], msgSubs = {}, installEv = null;
 window.addEventListener("beforeinstallprompt", e => { e.preventDefault(); installEv = e; });
 if ("serviceWorker" in navigator && location.protocol.startsWith("http")) navigator.serviceWorker.register("sw.js").catch(() => {});
 
@@ -221,7 +206,7 @@ $("gbtn").onclick = async () => {
 
 onAuthStateChanged(auth, async user => {
   subs.forEach(f => f()); subs = []; Object.values(msgSubs).forEach(f => f()); msgSubs = {};
-  friends = {}; incoming = {}; msgs = {}; reads = {}; active = null; P = null; blocked = {}; banned = null; ADM = false;
+  friends = {}; incoming = {}; msgs = {}; reads = {}; active = null; P = null;
   document.querySelectorAll(".ov").forEach(o => o.remove());
   if (!user) { me = null; setAcc(); show("login"); return; }
   me = user; show("app");
@@ -239,19 +224,14 @@ $("myav").onclick = () => profileModal(false);
 
 /* ---------- profile ---------- */
 function profileModal(required) {
-  const init = P || { name: me.displayName || "", username: "", avatar: me.photoURL || "", bio: "", theme: "#e11d48", banner: "" };
-  let theme = init.theme || "#e11d48", banner = init.banner || "";
-  const bn = h("div", { class: "bn", onclick: () => bpick.click() }, h("span", {}));
-  const paintB = () => { bn.style.backgroundImage = banner ? `url(${banner})` : ""; bn.firstChild.textContent = banner ? "" : "Tap to add a banner"; };
-  const bpick = h("input", { type: "file", accept: "image/*", class: "hide", onchange: async () => { if (bpick.files[0]) { banner = await shrink(bpick.files[0], 520); paintB(); } } });
-  const rmb = h("button", { class: "ib", style: "display:inline;font-size:12px;color:#fb7185", onclick: () => { banner = ""; paintB(); } }, "Remove banner");
-  paintB();
-  const av = h("img", { class: "av", style: "width:88px;height:88px;margin:-44px auto 0;display:block;position:relative", src: init.avatar || gen("ghost") });
+  const init = P || { name: me.displayName || "", username: "", avatar: me.photoURL || "", bio: "", theme: "#e11d48" };
+  let theme = init.theme || "#e11d48";
+  const av = h("img", { class: "av", style: "width:88px;height:88px;margin:auto;display:block", src: init.avatar || gen("ghost") });
   const name = h("input", { value: init.name, placeholder: "Ghost" });
   const user = h("input", { value: init.username, placeholder: "ghost_user", autocapitalize: "none", maxLength: 20,
     oninput: () => user.value = user.value.toLowerCase().replace(/[^a-z0-9_]/g, "") });
   const avatar = h("input", { value: init.avatar, placeholder: "https://…", oninput: () => av.src = avatar.value || gen(user.value || "ghost") });
-  const bio = h("textarea", { rows: 2, placeholder: "Hey! I'm on Ghost Chat 👻", maxLength: 160 }, init.bio || "");
+  const bio = h("textarea", { rows: 2, placeholder: "Hey! I'm on Ghost Chat 👻", maxLength: 140 }, init.bio || "");
   const err = h("div", { class: "err" });
   const pick = h("input", { type: "file", accept: "image/*", class: "hide", onchange: async () => { if (pick.files[0]) { avatar.value = await shrink(pick.files[0], 256, true); av.src = avatar.value; } } });
   const tb = THEMES.map(c => h("button", { style: `background:${c}`, class: c === theme ? "sel" : "", onclick: () => {
@@ -261,7 +241,7 @@ function profileModal(required) {
     const u = user.value.trim();
     if (!/^[a-z0-9_]{3,20}$/.test(u)) { err.textContent = "Username: 3–20 letters, numbers or _"; return; }
     save.disabled = true; err.textContent = "";
-    const data = { name: name.value.trim() || u, username: u, avatar: avatar.value.trim() || gen(u), bio: bio.value.trim(), theme, banner };
+    const data = { name: name.value.trim() || u, username: u, avatar: avatar.value.trim() || gen(u), bio: bio.value.trim(), theme };
     const upd = { ["users/" + me.uid]: data, ["usernames/" + u]: me.uid };
     if (P && P.username && P.username !== u) upd["usernames/" + P.username] = null;
     try { await update(ref(db), upd); P = data; setAcc(theme); paintMe(); close(); toast("Profile saved"); render();
@@ -269,8 +249,8 @@ function profileModal(required) {
     catch { err.textContent = "That username is taken (or not allowed). Try another."; save.disabled = false; }
   } }, "Save profile");
   const close = modal(required ? "Set up your profile" : "Edit profile", h("div", {},
-    bn, bpick, av, h("div", { style: "text-align:center" }, h("button", { class: "ib", style: "display:inline;font-size:12px;color:#fb7185", onclick: () => { avatar.value = gen(user.value || name.value || "ghost" + Math.random().toString(36).slice(2, 6)); av.src = avatar.value; } }, "Generate ghost avatar"), h("button", { class: "ib", style: "display:inline;font-size:12px;color:#fb7185;margin-left:10px", onclick: () => pick.click() }, "Upload photo"), pick),
-    h("div", { style: "text-align:center" }, rmb), h("label", {}, "Google account"), h("div", { class: "sub", style: "padding:2px" }, me.email || ""), h("label", {}, "Display name"), name, h("label", {}, "Username" + (required ? " (required)" : "")), user,
+    av, h("div", { style: "text-align:center" }, h("button", { class: "ib", style: "display:inline;font-size:12px;color:#fb7185", onclick: () => { avatar.value = gen(user.value || name.value || "ghost" + Math.random().toString(36).slice(2, 6)); av.src = avatar.value; } }, "Generate ghost avatar"), h("button", { class: "ib", style: "display:inline;font-size:12px;color:#fb7185;margin-left:10px", onclick: () => pick.click() }, "Upload photo"), pick),
+    h("label", {}, "Google account"), h("div", { class: "sub", style: "padding:2px" }, me.email || ""), h("label", {}, "Display name"), name, h("label", {}, "Username" + (required ? " (required)" : "")), user,
     h("label", {}, "Avatar URL"), avatar, h("label", {}, "Bio"), bio, h("label", {}, "Accent color"), h("div", { class: "themes" }, tb),
     err, save, !required && h("button", { class: "btn alt", style: "width:100%;margin-top:8px", onclick: () => { close(); signOut(auth); } }, "Log out")), !required);
 }
@@ -280,9 +260,6 @@ function start() {
   if (subs.length) return;
   document.addEventListener("click", askNotif, { once: true });
   subs.push(onValue(ref(db, "config/app"), s => { CFG = s.val() || {}; applyCfg(); }));
-  subs.push(onValue(ref(db, "blocks/" + me.uid), s => { blocked = s.val() || {}; render(); renderChat(); }, () => {}));
-  subs.push(onValue(ref(db, "bans/" + me.uid), s => { banned = s.val(); paintLock(); }, () => {}));
-  get(ref(db, "admins/" + me.uid)).then(s => { ADM = s.val() === true; paintLock(); }).catch(() => {});
   subs.push(onValue(ref(db, "incall/" + me.uid), s => incomingCall(s.val())));
   subs.push(onValue(ref(db, "friends/" + me.uid), async s => {
     const ids = Object.keys(s.val() || {});
@@ -333,9 +310,9 @@ function render() {
 function openChat(id) { active = id; $("app").classList.add("chat"); markRead(id); render(); renderChat(); $("txt").focus(); }
 function renderChat() {
   const u = friends[active]; const box = $("msgs");
-  $("chead").classList.toggle("hide", !u); $("bar").classList.toggle("hide", !u || !!blocked[active]);
+  $("chead").classList.toggle("hide", !u); $("bar").classList.toggle("hide", !u);
   if (!u) { box.replaceChildren(h("div", { class: "empty" }, h("b", {}, "👻"), "Select a contact to view your conversation. Add friends by their username to start a private chat.")); $("app").classList.remove("chat"); return; }
-  $("cav").src = u.avatar; $("cav").style.setProperty("--r", u.theme || "var(--ln)"); $("cname").textContent = u.name + (blocked[active] ? " (blocked)" : ""); $("cuser").textContent = "@" + u.username + (u.bio ? " · " + u.bio : "");
+  $("cav").src = u.avatar; $("cav").style.setProperty("--r", u.theme || "var(--ln)"); $("cname").textContent = u.name; $("cuser").textContent = "@" + u.username + (u.bio ? " · " + u.bio : "");
   const a = msgs[active] || [];
   box.replaceChildren(...(a.length ? a.map(m => h("div", { class: "m" + (m.from === me.uid ? " me" : "") }, body(m), h("small", {}, fmtT(m.at))))
     : [h("div", { class: "empty" }, h("b", {}, "💬"), `Say hi to ${u.name} 👋`)]));
@@ -344,8 +321,8 @@ function renderChat() {
 $("back").onclick = () => { $("app").classList.remove("chat"); active = null; render(); renderChat(); };
 $("bar").onsubmit = async e => {
   e.preventDefault(); const text = $("txt").value.trim(); if (!text || !active) return; $("txt").value = "";
-  try { await push(ref(db, `chats/${cid(me.uid, active)}/messages`), { from: me.uid, to: active, text, at: Date.now() }); }
-  catch { toast("Message failed – blocked or suspended?"); }
+  try { await push(ref(db, `chats/${cid(me.uid, active)}/messages`), { from: me.uid, text, at: Date.now() }); }
+  catch { toast("Message failed to send"); }
 };
 $("delb").onclick = () => {
   const u = friends[active], id = active; if (!u) return;
@@ -420,7 +397,7 @@ function applyCfg() {
   const n = CFG.name || "Ghost Chat"; $("bname").textContent = n; $("lname").textContent = n; document.title = n;
   document.documentElement.style.setProperty("--blur", (CFG.blur ?? 40) + "px");
   const b = $("banner"); b.textContent = CFG.banner || ""; b.classList.toggle("hide", !CFG.banner);
-  setAcc(P && P.theme); paintMe(); skin(); paintLock();
+  setAcc(P && P.theme); paintMe();
 }
 const cacheGet = id => { try { return JSON.parse(localStorage.getItem(`gc_${me.uid}_${id}`)) || undefined; } catch {} };
 const cacheSet = (id, a) => { const k = `gc_${me.uid}_${id}`, t = a.slice(-25);
@@ -432,7 +409,7 @@ const shrink = (file, max, sq) => new Promise(res => { const i = new Image(); i.
   let sx = 0, sy = 0, sw = i.width, sh = i.height; if (sq) { const s = Math.min(sw, sh); sx = (sw - s) / 2; sy = (sh - s) / 2; sw = sh = s; }
   const k = Math.min(1, max / Math.max(sw, sh)), c = document.createElement("canvas"); c.width = sw * k; c.height = sh * k;
   c.getContext("2d").drawImage(i, sx, sy, sw, sh, 0, 0, c.width, c.height); res(c.toDataURL("image/jpeg", .72)); }; i.src = URL.createObjectURL(file); });
-const sendMsg = async o => { try { await push(ref(db, `chats/${cid(me.uid, active)}/messages`), { from: me.uid, to: active, at: Date.now(), ...o }); } catch { toast("Message failed – blocked or suspended?"); } };
+const sendMsg = async o => { try { await push(ref(db, `chats/${cid(me.uid, active)}/messages`), { from: me.uid, at: Date.now(), ...o }); } catch { toast("Message failed to send"); } };
 
 /* ---------- photos & voice ---------- */
 $("attb").onclick = () => $("file").click();
@@ -621,156 +598,40 @@ function sideView() {
   [["user", "Account", "Name, username, bio, photo", () => profileModal(false)], ["drop", "Appearance", "Accent colour & chat theme", () => profileModal(false)],
    ["bell", "Notifications", on ? "On – messages & calls" : "Tap to enable message & call alerts", askNow], ["db", "Storage and data", "Clear saved chats on this phone", clearCache],
    ["down", "Get the app", "Install, QR code & link", () => $("dlb").click()], ["share", "Invite a friend", "Share the Ghost Chat link", invite],
-   ["info", "About", CFG.by || "Powered by DxG Studio", aboutModal], ["shield", "Blocked users", Object.keys(blocked).length + " blocked", blockedModal], ["shield", "Admin panel", "Admins only", adminGate], ["out", "Log out", "", () => signOut(auth)]]
+   ["info", "About", CFG.by || "Powered by DxG Studio", aboutModal], ["shield", "Admin panel", "Admins only", adminGate], ["out", "Log out", "", () => signOut(auth)]]
   .forEach(([ic, t, sub, f]) => l.append(h("div", { class: "sr", onclick: f }, svg(IC[ic]), h("div", {}, h("div", { class: "t" }, t), sub && h("div", { class: "s" }, sub)))));
-}
-
-/* ---------- skin / effects ---------- */
-const WALLS = { ghost: ["rgba(225,29,72,.6)", "rgba(127,29,29,.65)", "rgba(244,63,94,.35)"], ocean: ["rgba(14,165,233,.55)", "rgba(30,58,138,.65)", "rgba(6,182,212,.35)"],
-  forest: ["rgba(34,197,94,.45)", "rgba(20,83,45,.7)", "rgba(132,204,22,.3)"], violet: ["rgba(168,85,247,.55)", "rgba(88,28,135,.7)", "rgba(217,70,239,.35)"],
-  gold: ["rgba(245,158,11,.5)", "rgba(120,53,15,.7)", "rgba(250,204,21,.3)"], mono: ["rgba(115,115,115,.4)", "rgba(38,38,38,.7)", "rgba(163,163,163,.2)"] };
-let fxId = 0;
-function skin() {
-  const R = document.documentElement, w = WALLS[CFG.wall] || WALLS.ghost;
-  w.forEach((c, k) => R.style.setProperty("--g" + (k + 1), c));
-  R.dataset.bubble = CFG.bubble || "round"; R.dataset.font = CFG.font || "sys"; R.style.setProperty("--glow", CFG.glow || 0);
-  [["vcall", "nocalls"], ["vidcall", "nocalls"], ["attb", "nophotos"], ["micb", "novoice"]].forEach(([e, k]) => $(e).classList.toggle("hide", !!CFG[k]));
-  let c = $("fx"); if (!c) { c = h("canvas", { id: "fx", style: "position:fixed;inset:0;width:100%;height:100%;z-index:-1;pointer-events:none" }); document.body.append(c); }
-  cancelAnimationFrame(fxId); const x = c.getContext("2d"); c.width = innerWidth; c.height = innerHeight; x.clearRect(0, 0, c.width, c.height);
-  const k = CFG.fx; if (!k || k === "none" || matchMedia("(prefers-reduced-motion:reduce)").matches) return;
-  const ch = { snow: "❄", hearts: "♥", stars: "✦", ghosts: "👻" }[k] || "•";
-  const ps = Array.from({ length: 28 }, () => ({ x: Math.random() * c.width, y: Math.random() * c.height, s: 10 + Math.random() * 16, v: .3 + Math.random() * .9, d: Math.random() * 6 }));
-  const loop = () => { x.clearRect(0, 0, c.width, c.height); x.globalAlpha = .55; x.fillStyle = k === "hearts" ? (CFG.acc || "#e11d48") : "#fff";
-    ps.forEach(p => { p.y += p.v; p.d += .02; p.x += Math.sin(p.d) * .5; if (p.y > c.height + 20) { p.y = -20; p.x = Math.random() * c.width; } x.font = p.s + "px sans-serif"; x.fillText(ch, p.x, p.y); });
-    fxId = requestAnimationFrame(loop); }; loop();
-}
-function paintLock() {
-  const t = banned ? "Your account is suspended" + (banned.reason ? ": " + banned.reason : "") : CFG.maint && !ADM ? CFG.maint : "";
-  let l = $("lock"); if (!t) { l && l.remove(); return; }
-  if (!l) { l = h("div", { id: "lock", class: "ov", style: "z-index:50" }, h("div", { class: "md", style: "text-align:center" }, h("div", { style: "font-size:42px" }, "👻"), h("p", { id: "lockt", style: "margin:10px 0" }), h("button", { class: "btn alt", onclick: () => signOut(auth) }, "Log out"))); document.body.append(l); }
-  $("lockt").textContent = t;
-}
-
-/* ---------- profile view / report / block ---------- */
-const heroEl = u => h("div", { class: "bn", style: u.banner ? `background-image:url(${u.banner})` : `background:linear-gradient(135deg,${u.theme || "#e11d48"},#12070a)`, onclick: () => {} });
-function viewProfile(uid, u) {
-  if (!u) return; const bl = !!blocked[uid];
-  const c = modal("Profile", h("div", {}, heroEl(u),
-    h("img", { class: "av", src: u.avatar, style: `width:88px;height:88px;margin:-44px auto 0;display:block;position:relative;--r:${u.theme || "#e11d48"}` }),
-    h("div", { style: "text-align:center;margin-top:8px" }, h("div", { class: "name", style: "font-size:20px" }, u.name), h("div", { class: "sub" }, "@" + u.username),
-      h("p", { style: "margin-top:10px;white-space:pre-wrap;font-size:14px" }, u.bio || "No bio yet")),
-    uid !== me.uid && h("div", { style: "display:flex;gap:8px;margin-top:16px" },
-      h("button", { class: "btn alt grow", onclick: () => { c(); reportModal(uid, u); } }, "🚩 Report"),
-      h("button", { class: "btn red grow", onclick: async () => { try { bl ? await remove(ref(db, `blocks/${me.uid}/${uid}`)) : await set(ref(db, `blocks/${me.uid}/${uid}`), true); toast(bl ? "Unblocked" : "Blocked"); c(); } catch { toast("Not allowed by Firebase rules"); } } }, bl ? "Unblock" : "⛔ Block"))));
-}
-$("cav").onclick = $("cname").onclick = () => { if (active) viewProfile(active, friends[active]); };
-function reportModal(uid, u) {
-  let shot = ""; const rs = ["Spam", "Harassment / abuse", "Inappropriate content", "Fake account / scam", "Other"];
-  const reason = h("select", {}, ...rs.map(r => h("option", {}, r))), det = h("textarea", { rows: 4, maxLength: 600, placeholder: "What happened? Add details…" });
-  const pvw = h("img", { class: "mi hide", style: "margin-top:8px" });
-  const file = h("input", { type: "file", accept: "image/*", class: "hide", onchange: async () => { const f = file.files[0]; if (f) { shot = await shrink(f, 900); pvw.src = shot; pvw.classList.remove("hide"); } } });
-  const blk = h("input", { type: "checkbox", style: "width:auto" }), err = h("div", { class: "err" });
-  const send = h("button", { class: "btn", style: "width:100%;margin-top:14px", onclick: async () => {
-    if (det.value.trim().length < 5 && !shot) { err.textContent = "Add some details or a screenshot."; return; }
-    send.disabled = true;
-    try { await push(ref(db, "reports"), { from: me.uid, fromName: P?.name || "", fromUser: P?.username || "", to: uid, toName: u.name, toUser: u.username, reason: reason.value, details: det.value.trim(), shot, at: Date.now(), status: "open" });
-      if (blk.checked) await set(ref(db, `blocks/${me.uid}/${uid}`), true).catch(() => {});
-      c(); toast("Report sent to admins"); } catch { err.textContent = "Could not send report (Firebase rules)."; send.disabled = false; } } }, "Send report");
-  const c = modal("Report @" + u.username, h("div", {}, h("label", {}, "Reason"), reason, h("label", {}, "Details"), det, h("label", {}, "Screenshot (optional)"),
-    h("button", { class: "btn alt sm", onclick: () => file.click() }, "📷 Attach screenshot"), file, pvw,
-    h("label", { style: "display:flex;gap:8px;align-items:center" }, blk, "Also block this user"), err, send));
-}
-async function blockedModal() {
-  const ids = Object.keys(blocked), box = h("div", {}); modal("Blocked users", box);
-  if (!ids.length) { box.append(h("p", { class: "sub" }, "You haven't blocked anyone.")); return; }
-  for (const id of ids) {
-    let d = { name: "User", username: id.slice(0, 6), avatar: gen(id) }; try { const s = await get(ref(db, "users/" + id)); if (s.exists()) d = s.val(); } catch {}
-    box.append(h("div", { class: "pr" }, h("img", { class: "av", src: d.avatar }), h("div", { class: "grow" }, h("div", { class: "name" }, d.name), h("div", { class: "sub" }, "@" + d.username)),
-      h("button", { class: "btn sm", onclick: async e => { await remove(ref(db, `blocks/${me.uid}/${id}`)); e.target.closest(".pr").remove(); } }, "Unblock")));
-  }
 }
 
 /* ---------- admin ---------- */
 const HASH = "bedc35fb9816004025a4de9b0b751eb980fc08ec18318b01024d51b1d35744c2";
 const sha = async t => [...new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(t)))].map(b => b.toString(16).padStart(2, "0")).join("");
-const RULES = {"rules": {".read": false, ".write": false, "admins": {"$uid": {".read": "auth != null && auth.uid === $uid"}}, "config": {".read": "auth != null", "app": {".write": "root.child('admins').child(auth.uid).val() === true"}}, "users": {".read": "auth != null", "$uid": {".write": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).val() === true)"}}, "usernames": {".read": "auth != null", "$u": {".write": "auth != null && ((!data.exists() && newData.val() === auth.uid) || data.val() === auth.uid || root.child('admins').child(auth.uid).val() === true)"}}, "friends": {"$uid": {".read": "auth.uid === $uid", ".write": "auth.uid === $uid", "$fid": {".write": "auth.uid === $fid && (!newData.exists() || root.child('requests').child(auth.uid).child($uid).exists())"}}}, "requests": {"$t": {".read": "auth.uid === $t", "$s": {".read": "auth.uid === $s", ".write": "(auth.uid === $s && !root.child('blocks').child($t).child(auth.uid).exists()) || auth.uid === $t"}}}, "reads": {"$uid": {".read": "auth.uid === $uid", ".write": "auth.uid === $uid"}}, "chats": {"$c": {"messages": {".read": "auth != null && $c.contains(auth.uid)", ".write": "auth != null && ($c.contains(auth.uid) || root.child('admins').child(auth.uid).val() === true)", "$m": {".validate": "!newData.exists() || (newData.child('from').val() === auth.uid && newData.child('to').exists() && !root.child('blocks').child(newData.child('to').val()).child(auth.uid).exists() && !root.child('bans').child(auth.uid).exists())"}}}}, "calls": {"$id": {".read": "auth != null", ".write": "auth != null"}}, "incall": {"$uid": {".read": "auth != null", ".write": "auth != null"}}, "reports": {".read": "root.child('admins').child(auth.uid).val() === true", "$id": {".write": "auth != null && ((!data.exists() && newData.child('from').val() === auth.uid) || root.child('admins').child(auth.uid).val() === true)"}}, "blocks": {"$u": {".write": "auth.uid === $u", ".read": "auth.uid === $u", "$b": {".read": "auth.uid === $b"}}}, "bans": {".read": "root.child('admins').child(auth.uid).val() === true", ".write": "root.child('admins').child(auth.uid).val() === true", "$u": {".read": "auth.uid === $u"}}}};
-const ago = ts => new Date(ts).toLocaleString([], { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
-const cp = async (t, m) => { try { await navigator.clipboard.writeText(t); toast(m); } catch { prompt("Copy:", t); } };
 function adminGate() {
   const pw = h("input", { type: "password", placeholder: "Admin password" }), e = h("div", { class: "err" });
   const c = modal("Admin access", h("div", {}, pw, e, h("button", { class: "btn", style: "width:100%;margin-top:12px", onclick: async () => {
     if (await sha(pw.value) === HASH) { c(); adminPanel(); } else e.textContent = "Wrong password"; } }, "Unlock")));
   pw.focus();
 }
-function adminPanel() {
-  let D = { ...CFG }, tab = "dash"; const body = h("div", {}), msg = h("div", { class: "err" });
-  const pv = () => { const o = CFG; CFG = D; applyCfg(); CFG = o; };
-  const inp = (k, l, ph) => [h("label", {}, l), h("input", { value: D[k] || "", placeholder: ph || "", oninput: e => { D[k] = e.target.value; if (k === "name") pv(); } })];
-  const sel = (k, l, o) => [h("label", {}, l), h("select", { onchange: e => { D[k] = e.target.value; pv(); } }, ...o.map(([v, t]) => h("option", { value: v, selected: (D[k] || o[0][0]) === v }, t)))];
-  const rng = (k, l, max, def) => [h("label", {}, l), h("input", { type: "range", min: 0, max, value: D[k] ?? def, oninput: e => { D[k] = +e.target.value; pv(); } })];
-  const tog = (k, l) => h("div", { class: "pr" }, h("span", { class: "grow" }, l), h("input", { type: "checkbox", checked: !!D[k], style: "width:auto", onchange: e => { D[k] = e.target.checked; pv(); } }));
-  const look = () => [...inp("name", "App name", "Ghost Chat"), ...inp("banner", "Announcement banner (shown to everyone)"), ...inp("by", "About line", "Powered by DxG Studio"),
-    h("label", {}, "Accent colour"), h("input", { type: "color", value: D.acc || "#e11d48", style: "height:44px;padding:4px", oninput: e => { D.acc = e.target.value; pv(); } })];
-  const theme = () => [h("label", {}, "Wallpaper"), h("div", { class: "themes", style: "flex-wrap:wrap" }, ...Object.entries(WALLS).map(([k, [a, b, c]]) =>
-      h("button", { title: k, class: (D.wall || "ghost") === k ? "sel" : "", style: `width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,${a},${b},${c}),#12070a`, onclick: () => { D.wall = k; pv(); draw(); } }))),
-    ...sel("bubble", "Message bubbles", [["round", "Rounded"], ["pill", "Pill"], ["sharp", "Sharp"]]), ...sel("font", "Font", [["sys", "Default"], ["mono", "Mono"], ["serif", "Serif"]]),
-    ...sel("fx", "Floating effect", [["none", "None"], ["snow", "❄ Snow"], ["hearts", "♥ Hearts"], ["stars", "✦ Stars"], ["ghosts", "👻 Ghosts"]]),
-    ...rng("blur", "Background blur", 80, 40), ...rng("glow", "Button glow", 100, 0)];
-  const settings = () => [...inp("turn", "TURN for calls (optional): metered.ca credentials URL or JSON list"), ...inp("maint", "Maintenance message (shown to everyone except admins; empty = off)"),
-    h("label", {}, "Feature switches"), tog("nocalls", "Disable calls"), tog("nophotos", "Disable photo sending"), tog("novoice", "Disable voice messages"),
-    h("button", { class: "btn alt", style: "width:100%;margin-top:14px", onclick: async () => { if (!confirm("Reset all app settings?")) return;
-      try { await remove(ref(db, "config/app")); D = {}; pv(); draw(); toast("Reset to default"); } catch { msg.textContent = "Not allowed by Firebase rules."; } } }, "Reset to default")];
-  const dash = async () => {
-    const el = h("p", { class: "sub" }, "Loading…"); body.replaceChildren(el); let isA = false, nu = "?", nr = "?", nb = "?";
-    try { isA = (await get(ref(db, "admins/" + me.uid))).val() === true; } catch {}
-    try { nu = Object.keys((await get(ref(db, "users"))).val() || {}).length; } catch {}
-    try { nr = Object.values((await get(ref(db, "reports"))).val() || {}).filter(x => x.status !== "done").length; } catch {}
-    try { nb = Object.keys((await get(ref(db, "bans"))).val() || {}).length; } catch {}
-    const st = (n, t) => h("div", { class: "stat" }, h("b", {}, n), t);
-    body.replaceChildren(h("div", { class: "stats" }, st(nu, "Users"), st(nr, "Open reports"), st(nb, "Banned")),
-      h("div", { class: "pr" }, h("span", { class: "grow" }, isA ? "✅ Firebase admin rights active" : "❌ Not a Firebase admin yet")),
-      !isA && h("p", { class: "sub", style: "white-space:normal;margin-top:8px" }, "Fix the 'Not allowed' errors: 1) Copy rules → Firebase Console → Realtime Database → Rules → paste → Publish. 2) In Data tab add: admins → " + me.uid + " = true (boolean)."),
-      h("div", { style: "display:flex;gap:8px;margin-top:10px;flex-wrap:wrap" }, h("button", { class: "btn alt sm", onclick: () => cp(me.uid, "UID copied") }, "Copy my UID"), h("button", { class: "btn sm", onclick: () => cp(JSON.stringify(RULES, null, 2), "Rules copied") }, "Copy Firebase rules")));
-  };
-  const usersTab = async () => {
-    const q = h("input", { placeholder: "Search users…" }), list = h("div", {}); body.replaceChildren(q, list); let us = {}, bans = {};
-    try { us = (await get(ref(db, "users"))).val() || {}; } catch { list.replaceChildren(h("p", { class: "err" }, "Could not load users (check Firebase rules).")); return; }
-    try { bans = (await get(ref(db, "bans"))).val() || {}; } catch {}
-    const paint = () => { const t = q.value.toLowerCase();
-      list.replaceChildren(h("p", { class: "sub" }, Object.keys(us).length + " registered users"), ...Object.entries(us).filter(([, d]) => !t || ((d.name || "") + (d.username || "")).toLowerCase().includes(t)).map(([uid, d]) =>
-        h("div", { class: "pr" }, h("img", { class: "av", src: d.avatar, style: `--r:${d.theme || "#e11d48"}`, onclick: () => viewProfile(uid, d) }),
-          h("div", { class: "grow" }, h("div", { class: "name" }, d.name + (bans[uid] ? " 🚫" : "")), h("div", { class: "sub" }, "@" + d.username)),
-          uid === me.uid ? h("span", { class: "pill" }, "You") : [
-            h("button", { class: "btn sm alt", onclick: async () => { try { if (bans[uid]) { await remove(ref(db, "bans/" + uid)); delete bans[uid]; } else { const r = prompt("Ban reason (shown to user)", "Breaking the rules"); if (r === null) return; bans[uid] = { reason: r, at: Date.now() }; await set(ref(db, "bans/" + uid), bans[uid]); } paint(); } catch { toast("Not allowed by Firebase rules"); } } }, bans[uid] ? "Unban" : "Ban"),
-            h("button", { class: "btn sm red", onclick: async () => { if (!confirm("Remove @" + d.username + "?")) return; try { await update(ref(db), { ["users/" + uid]: null, ["usernames/" + d.username]: null }); delete us[uid]; paint(); } catch { toast("Not allowed by Firebase rules"); } } }, "Remove")]))); };
-    q.oninput = paint; paint();
-  };
-  const reportsTab = async () => {
-    body.replaceChildren(h("p", { class: "sub" }, "Loading…")); let r;
-    try { r = (await get(ref(db, "reports"))).val() || {}; } catch { body.replaceChildren(h("p", { class: "err" }, "Could not load reports – publish the rules and add yourself as admin (Dashboard tab).")); return; }
-    const rows = Object.entries(r).sort((a, b) => b[1].at - a[1].at);
-    const card = ([id, d]) => { const el = h("div", { class: "pr", style: "display:block" },
-      h("div", { class: "line" }, h("b", {}, d.reason || "Report"), h("span", { class: "pill" }, d.status === "done" ? "Resolved" : "Open")),
-      h("div", { class: "sub", style: "white-space:normal" }, `${d.fromName || "?"} (@${d.fromUser || "?"}) → ${d.toName || "?"} (@${d.toUser || "?"}) · ${ago(d.at)}`),
-      d.details && h("p", { style: "font-size:14px;margin:6px 0;white-space:pre-wrap" }, d.details),
-      d.shot && h("img", { class: "mi", src: d.shot, style: "max-height:160px;margin:6px 0", onclick: () => modal("Screenshot", h("img", { src: d.shot, style: "width:100%;border-radius:10px" })) }),
-      h("div", { style: "display:flex;gap:6px;flex-wrap:wrap;margin-top:6px" },
-        h("button", { class: "btn sm alt", onclick: async () => { try { await update(ref(db, "reports/" + id), { status: "done" }); reportsTab(); } catch { toast("Not allowed"); } } }, "Resolve"),
-        h("button", { class: "btn sm red", onclick: async () => { const why = prompt("Ban reason", "Breaking the rules"); if (why === null) return; try { await update(ref(db), { ["bans/" + d.to]: { reason: why, at: Date.now() }, ["reports/" + id + "/status"]: "done" }); toast("User banned"); reportsTab(); } catch { toast("Not allowed"); } } }, "Ban user"),
-        h("button", { class: "btn sm alt", onclick: async () => { try { await remove(ref(db, "reports/" + id)); el.remove(); } catch { toast("Not allowed"); } } }, "Delete"))); return el; };
-    body.replaceChildren(h("p", { class: "sub" }, rows.length + " reports"), ...rows.map(card));
-  };
-  const S = { look, theme, set: settings }, T = { dash, users: usersTab, reports: reportsTab };
-  const draw = () => body.replaceChildren(...S[tab]());
-  const foot = h("div", { class: "hide" }, msg, h("button", { class: "btn", style: "width:100%;margin-top:10px", onclick: async () => {
-    const o = {}; Object.entries(D).forEach(([k, v]) => { if (v !== "" && v != null && v !== false) o[k] = v; });
-    try { await set(ref(db, "config/app"), o); msg.style.color = "#4ade80"; msg.textContent = "Published ✔"; toast("App updated for everyone"); }
-    catch { msg.style.color = ""; msg.textContent = "Not allowed – open Dashboard to fix Firebase rules + admin."; } } }, "Save & publish"));
-  const chips = [["dash", "Dashboard"], ["look", "Look & text"], ["theme", "Theme & effects"], ["users", "Users"], ["reports", "Reports"], ["set", "Settings"]].map(([t, l]) => h("button", { class: "chip", "data-t": t, onclick: () => go(t) }, l));
-  const go = t => { tab = t; msg.textContent = ""; chips.forEach(b => b.classList.toggle("on", b.dataset.t === t)); foot.classList.toggle("hide", !S[t]); S[t] ? draw() : T[t](); };
-  const ov = h("div", { class: "ov", style: "align-items:start" }, h("div", { class: "md", style: "max-width:640px;min-height:80dvh" }, h("h2", {}, "Admin panel", h("button", { class: "ib", onclick: () => close() }, "✕")), h("div", { class: "tabs2" }, ...chips), body, foot));
-  const close = () => { ov.remove(); applyCfg(); };
-  document.body.append(ov); go("dash");
+async function adminPanel() {
+  const f = (k, l, ph) => { const i = h("input", { value: CFG[k] || "", placeholder: ph || "" }); i.k = k; return [l, i]; };
+  const fs = [f("name", "App name", "Ghost Chat"), f("banner", "Announcement banner (shown to everyone)"), f("by", "About line", "Powered by DxG Studio"), f("turn", "TURN for calls (optional): metered.ca credentials URL or JSON list")];
+  const acc = h("input", { type: "color", value: CFG.acc || "#e11d48", style: "height:44px;padding:4px" });
+  const blur = h("input", { type: "range", min: 0, max: 80, value: CFG.blur ?? 40 });
+  const msg = h("div", { class: "err" }), users = h("div", {}, h("p", { class: "sub" }, "Loading users…"));
+  const save = h("button", { class: "btn", style: "width:100%;margin-top:14px", onclick: async () => {
+    const o = { acc: acc.value, blur: +blur.value }; fs.forEach(([, i]) => o[i.k] = i.value.trim());
+    try { await set(ref(db, "config/app"), o); msg.textContent = ""; toast("App updated for everyone"); } catch { msg.textContent = "Not allowed – add the Firebase rule for config/app."; } } }, "Save & publish");
+  const reset = h("button", { class: "btn alt", style: "width:100%;margin-top:8px", onclick: async () => { try { await remove(ref(db, "config/app")); toast("Reset to default"); } catch { msg.textContent = "Not allowed by Firebase rules."; } } }, "Reset to default");
+  const c = modal("Admin panel", h("div", {}, h("div", { class: "sec", style: "padding:0" }, "App look & text"),
+    ...fs.flat(), h("label", {}, "Accent colour"), acc, h("label", {}, "Background blur"), blur, msg, save, reset,
+    h("div", { class: "sec", style: "padding:18px 0 0" }, "Users"), users));
+  [...document.querySelectorAll(".md")].pop().style.maxWidth = "560px";
+  try {
+    const s = await get(ref(db, "users")), rows = []; s.forEach(x => rows.push([x.key, x.val()]));
+    users.replaceChildren(h("p", { class: "sub" }, rows.length + " registered users"), ...rows.map(([uid, d]) => h("div", { class: "pr" },
+      h("img", { class: "av", src: d.avatar, style: `--r:${d.theme || "#e11d48"}` }), h("div", { class: "grow" }, h("div", { class: "name" }, d.name), h("div", { class: "sub" }, "@" + d.username)),
+      uid === me.uid ? h("span", { class: "pill" }, "You") : h("button", { class: "btn sm red", onclick: async e => { if (!confirm("Remove @" + d.username + "?")) return;
+        try { await update(ref(db), { ["users/" + uid]: null, ["usernames/" + d.username]: null }); e.target.closest(".pr").remove(); } catch { toast("Not allowed by Firebase rules"); } } }, "Remove"))));
+  } catch { users.replaceChildren(h("p", { class: "err" }, "Could not load users (check Firebase rules).")); }
 }
 </script>
 </body>
