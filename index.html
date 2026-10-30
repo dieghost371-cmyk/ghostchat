@@ -742,7 +742,7 @@ function adminPanel() {
           h("div", { class: "grow" }, h("div", { class: "name" }, d.name + (bans[uid] ? " 🚫" : "")), h("div", { class: "sub" }, "@" + d.username)),
           uid === me.uid ? h("span", { class: "pill" }, "You") : [
             h("button", { class: "btn sm alt", onclick: async () => { try { if (bans[uid]) { await remove(ref(db, "bans/" + uid)); delete bans[uid]; } else { const r = prompt("Ban reason (shown to user)", "Breaking the rules"); if (r === null) return; bans[uid] = { reason: r, at: Date.now() }; await set(ref(db, "bans/" + uid), bans[uid]); } paint(); } catch { toast("Not allowed by Firebase rules"); } } }, bans[uid] ? "Unban" : "Ban"),
-            h("button", { class: "btn sm red", onclick: async () => { if (!confirm("Remove @" + d.username + "?")) return; try { await update(ref(db), { ["users/" + uid]: null, ["usernames/" + d.username]: null }); delete us[uid]; paint(); } catch { toast("Not allowed by Firebase rules"); } } }, "Remove")])))); };
+            h("button", { class: "btn sm red", onclick: async () => { if (!confirm("Remove @" + d.username + "?")) return; try { await update(ref(db), { ["users/" + uid]: null, ["usernames/" + d.username]: null }); delete us[uid]; paint(); } catch { toast("Not allowed by Firebase rules"); } } }, "Remove")]))); };
     q.oninput = paint; paint();
   };
   const reportsTab = async () => {
